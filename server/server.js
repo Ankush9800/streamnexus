@@ -11,7 +11,7 @@ const app = express();
 // CORS configuration
 const corsOptions = {
   origin: process.env.NODE_ENV === 'production'
-    ? ['https://streamnexus.netlify.app']
+    ? ['https://streamnexus.netlify.app', 'http://localhost:3000']
     : ['http://localhost:3000'],
   credentials: true,
   optionsSuccessStatus: 200
