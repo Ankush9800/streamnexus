@@ -1,0 +1,16 @@
+name: Keep Render Service Alive
+
+on:
+  schedule:
+    # Runs every 10 minutes
+    - cron: '*/10 * * * *'
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping server
+        run: curl -sS https://streamnexus-wpkg.onrender.com/api/movies
+      - name: Ping health endpoint
+        run: curl -sS https://streamnexus-wpkg.onrender.com/api/health || true 
