@@ -63,7 +63,19 @@ const movieSchema = new mongoose.Schema({
   source: String,
   cast: [String],
   format: String,
-  subtitle: String
+  subtitle: String,
+  contentType: { type: String, enum: ['movie', 'series'], default: 'movie' },
+  episodes: [{
+    number: { type: Number, min: 1 },
+    title: { type: String },
+    description: { type: String, default: '' },
+    downloadLinks: [{
+      quality: { type: String },
+      url: { type: String },
+      size: { type: String, default: '' }
+    }],
+    screenshot: { type: String, default: '' }
+  }]
 });
 
 const Movie = mongoose.model('Movie', movieSchema);
@@ -220,10 +232,24 @@ app.post('/api/movies', authMiddleware, async (req, res) => {
       return res.status(403).json({ message: 'Not authorized' });
     }
     
+    console.log('Received movie data:', JSON.stringify(req.body));
+    
+    // Validate required fields
+    if (!req.body.title) {
+      return res.status(400).json({ message: 'Title is required' });
+    }
+    if (!req.body.description) {
+      return res.status(400).json({ message: 'Description is required' });
+    }
+    if (!req.body.releaseYear) {
+      return res.status(400).json({ message: 'Release year is required' });
+    }
+    
     const movie = new Movie(req.body);
     const newMovie = await movie.save();
     res.status(201).json(newMovie);
   } catch (error) {
+    console.error('Error saving movie:', error);
     res.status(400).json({ message: error.message });
   }
 });
