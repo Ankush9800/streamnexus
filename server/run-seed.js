@@ -7,12 +7,10 @@ const path = require('path');
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 // Connect to MongoDB
-mongoose.connect(process.env.MONGODB_URI, {
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/streamnexus', {
   useNewUrlParser: true,
   useUnifiedTopology: true
-})
-.then(() => console.log('Connected to MongoDB'))
-.catch(err => console.error('MongoDB connection error:', err));
+});
 
 // Movie Schema (matching our server.js schema)
 const movieSchema = new mongoose.Schema({
@@ -37,32 +35,40 @@ const Movie = mongoose.model('Movie', movieSchema);
 // Add one sample movie
 const addSampleMovie = async () => {
   try {
-    const movie = new Movie({
-      title: 'Inception',
-      description: 'A thief who steals corporate secrets through the use of dream-sharing technology is given the inverse task of planting an idea into the mind of a C.E.O.',
-      releaseYear: 2010,
-      genre: ['Action', 'Adventure', 'Science Fiction'],
-      rating: 8.8,
-      posterUrl: 'https://m.media-amazon.com/images/M/MV5BMjAxMzY3NjcxNF5BMl5BanBnXkFtZTcwNTI5OTM0Mw@@._V1_.jpg',
-      downloadUrl: 'https://example.com/inception.mp4',
+    const sampleMovie = {
+      title: 'Sample Movie',
+      description: 'This is a sample movie added as a test.',
+      releaseYear: 2023,
+      genre: ['Action', 'Adventure'],
+      rating: 4.5,
+      posterUrl: 'https://example.com/sample-poster.jpg',
+      downloadUrl: 'https://example.com/sample-download.mp4',
       downloadOptions: [
-        { quality: '720p', url: 'https://example.com/inception-720p.mp4', size: '1.5 GB' },
-        { quality: '1080p', url: 'https://example.com/inception.mp4', size: '3.2 GB' },
-        { quality: '4K', url: 'https://example.com/inception-4k.mp4', size: '8.7 GB' }
+        {
+          quality: '720p',
+          url: 'https://example.com/sample-720p.mp4',
+          size: '700MB'
+        },
+        {
+          quality: '1080p',
+          url: 'https://example.com/sample-1080p.mp4',
+          size: '1.5GB'
+        }
       ],
       screenshots: [
-        'https://m.media-amazon.com/images/M/MV5BMTM0MjUzNjkwMl5BMl5BanBnXkFtZTcwNjY0OTk1Mw@@._V1_.jpg',
-        'https://m.media-amazon.com/images/M/MV5BMjE0MjAwOTMxMF5BMl5BanBnXkFtZTcwODk1OTk1Mw@@._V1_.jpg',
-        'https://m.media-amazon.com/images/M/MV5BMTI3MzMwODA1MF5BMl5BanBnXkFtZTcwNDYzOTk1Mw@@._V1_.jpg'
-      ]
-    });
+        'https://example.com/screenshot1.jpg',
+        'https://example.com/screenshot2.jpg'
+      ],
+      language: 'English',
+      source: 'Example Source'
+    };
     
+    const movie = new Movie(sampleMovie);
     await movie.save();
-    console.log('Sample movie added successfully');
-    mongoose.connection.close();
+    
+    mongoose.disconnect();
   } catch (error) {
-    console.error('Error adding sample movie:', error);
-    mongoose.connection.close();
+    mongoose.disconnect();
   }
 };
 

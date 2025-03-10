@@ -24,12 +24,10 @@ app.use(express.json());
 mongoose.set('strictQuery', false);
 
 // MongoDB Connection
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/stream-nexus', {
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/streamnexus', {
   useNewUrlParser: true,
   useUnifiedTopology: true
 })
-.then(() => console.log('Connected to MongoDB'))
-.catch(err => console.error('MongoDB connection error:', err));
 
 // User Schema
 const userSchema = new mongoose.Schema({
@@ -105,7 +103,6 @@ const authMiddleware = async (req, res, next) => {
     req.user = user;
     next();
   } catch (error) {
-    console.error('Auth error:', error);
     res.status(401).json({ message: 'Invalid token' });
   }
 };
@@ -135,7 +132,6 @@ app.post('/api/auth/register', async (req, res) => {
     
     res.status(201).json({ message: 'User registered successfully' });
   } catch (error) {
-    console.error('Registration error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -172,7 +168,6 @@ app.post('/api/auth/login', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Login error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -232,31 +227,11 @@ app.post('/api/movies', authMiddleware, async (req, res) => {
       return res.status(403).json({ message: 'Not authorized' });
     }
     
-    console.log('Received movie data:', JSON.stringify(req.body));
-    
-    // Validate required fields
-    if (!req.body.title) {
-      return res.status(400).json({ message: 'Title is required' });
-    }
-    if (!req.body.description) {
-      return res.status(400).json({ message: 'Description is required' });
-    }
-    if (!req.body.releaseYear) {
-      return res.status(400).json({ message: 'Release year is required' });
-    }
-    
-    // Remove _id if it's empty to let MongoDB generate it
-    const movieData = { ...req.body };
-    if (movieData._id === '') {
-      delete movieData._id;
-    }
-    
-    const movie = new Movie(movieData);
-    const newMovie = await movie.save();
-    res.status(201).json(newMovie);
+    const movie = new Movie(req.body);
+    await movie.save();
+    res.status(201).json(movie);
   } catch (error) {
-    console.error('Error saving movie:', error);
-    res.status(400).json({ message: error.message });
+    res.status(500).json({ error: 'Failed to save movie' });
   }
 });
 
@@ -352,21 +327,27 @@ const createAdminUser = async () => {
       });
       
       await adminUser.save();
-      console.log('Admin user created: username: admin, password: admin123');
     }
   } catch (error) {
-    console.error('Error creating admin user:', error);
   }
 };
 
 // Add new server startup code
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
   createAdminUser();
 });
 
 // Add health check endpoint
 app.get('/api/health', (req, res) => {
   res.status(200).send('OK');
+});
+
+// Authentication error handling
+app.use((err, req, res, next) => {
+  if (err.name === 'UnauthorizedError') {
+    res.status(401).json({ error: 'Invalid token' });
+  } else {
+    next(err);
+  }
 }); 

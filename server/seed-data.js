@@ -6,12 +6,10 @@ const path = require('path');
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 // Connect to MongoDB
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/stream-nexus', {
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/streamnexus', {
   useNewUrlParser: true,
-  useUnifiedTopology: true
+  useUnifiedTopology: true,
 })
-.then(() => console.log('Connected to MongoDB'))
-.catch(err => console.error('MongoDB connection error:', err));
 
 // Movie Schema
 const movieSchema = new mongoose.Schema({
@@ -150,19 +148,16 @@ const movies = [
 // Function to seed the database
 const seedDatabase = async () => {
   try {
-    // Clear existing movies
+    // Clear existing data
     await Movie.deleteMany({});
-    console.log('Deleted existing movies');
     
-    // Insert new movies
+    // Add sample movies
     const result = await Movie.insertMany(movies);
-    console.log(`Successfully added ${result.length} movies to the database`);
     
-    // Close the connection
-    mongoose.connection.close();
+    mongoose.disconnect();
   } catch (error) {
-    console.error('Error seeding database:', error);
-    mongoose.connection.close();
+    mongoose.disconnect();
+    process.exit(1);
   }
 };
 

@@ -23,82 +23,57 @@ const userSchema = new mongoose.Schema({
 const User = mongoose.model('User', userSchema);
 
 // Connect to MongoDB
-mongoose.connect(process.env.MONGODB_URI, {
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/streamnexus', {
   useNewUrlParser: true,
-  useUnifiedTopology: true
+  useUnifiedTopology: true,
 })
 .then(() => {
-  console.log('Connected to MongoDB');
   createAdmin();
 })
 .catch(err => {
-  console.error('MongoDB connection error:', err);
   process.exit(1);
 });
 
-const createAdmin = () => {
-  rl.question('Enter admin username (default: admin): ', (username) => {
-    const adminUsername = username || 'admin';
+const createAdmin = async () => {
+  const adminUsername = process.env.ADMIN_USERNAME || 'admin';
+  const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
+  
+  try {
+    // Check if admin user already exists
+    const existingUser = await User.findOne({ username: adminUsername });
     
-    rl.question('Enter admin password (default: admin123): ', async (password) => {
-      const adminPassword = password || 'admin123';
+    if (existingUser) {
+      const answer = await promptYesNo();
       
-      try {
-        // Check if user exists
-        const existingUser = await User.findOne({ username: adminUsername });
-        
-        if (existingUser) {
-          console.log(`User '${adminUsername}' already exists.`);
-          console.log('Do you want to update the password?');
-          
-          rl.question('Update password? (y/n): ', async (answer) => {
-            if (answer.toLowerCase() === 'y') {
-              // Update password
-              const salt = await bcrypt.genSalt(10);
-              const hashedPassword = await bcrypt.hash(adminPassword, salt);
-              
-              await User.findByIdAndUpdate(existingUser._id, {
-                password: hashedPassword
-              });
-              
-              console.log(`Password updated for user '${adminUsername}'`);
-            } else {
-              console.log('Password not updated.');
-            }
-            
-            mongoose.connection.close();
-            rl.close();
-          });
-        } else {
-          // Create new admin user
-          const salt = await bcrypt.genSalt(10);
-          const hashedPassword = await bcrypt.hash(adminPassword, salt);
-          
-          const newAdmin = new User({
-            username: adminUsername,
-            password: hashedPassword,
-            isAdmin: true
-          });
-          
-          await newAdmin.save();
-          console.log(`Admin user created successfully!`);
-          console.log(`Username: ${adminUsername}`);
-          console.log(`Password: ${adminPassword}`);
-          
-          mongoose.connection.close();
-          rl.close();
-        }
-      } catch (error) {
-        console.error('Error creating admin user:', error);
-        mongoose.connection.close();
-        rl.close();
+      if (answer) {
+        existingUser.password = adminPassword;
+        await existingUser.save();
       }
-    });
-  });
+    } else {
+      // Create new admin user
+      const adminUser = new User({
+        username: adminUsername,
+        password: adminPassword,
+        isAdmin: true
+      });
+      
+      await adminUser.save();
+    }
+    
+    mongoose.disconnect();
+  } catch (error) {
+    mongoose.disconnect();
+    process.exit(1);
+  }
 };
+
+// Exit handler
+process.on('SIGINT', () => {
+  mongoose.disconnect();
+  process.exit(0);
+});
 
 // Handle closing
 rl.on('close', () => {
-  console.log('Exiting...');
   process.exit(0);
 }); 
