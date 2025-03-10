@@ -245,7 +245,13 @@ app.post('/api/movies', authMiddleware, async (req, res) => {
       return res.status(400).json({ message: 'Release year is required' });
     }
     
-    const movie = new Movie(req.body);
+    // Remove _id if it's empty to let MongoDB generate it
+    const movieData = { ...req.body };
+    if (movieData._id === '') {
+      delete movieData._id;
+    }
+    
+    const movie = new Movie(movieData);
     const newMovie = await movie.save();
     res.status(201).json(newMovie);
   } catch (error) {
