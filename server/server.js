@@ -224,14 +224,75 @@ app.get('/api/movies/:id', async (req, res) => {
 app.post('/api/movies', authMiddleware, async (req, res) => {
   try {
     if (!req.user.isAdmin) {
-      return res.status(403).json({ message: 'Not authorized' });
+      return res.status(403).json({ error: 'Not authorized to create movies' });
+    }
+    
+    // Validate required fields
+    if (!req.body.title) {
+      return res.status(400).json({ error: 'Title is required' });
+    }
+    
+    if (!req.body.description) {
+      return res.status(400).json({ error: 'Description is required' });
+    }
+    
+    if (!req.body.releaseYear) {
+      return res.status(400).json({ error: 'Release year is required' });
+    }
+    
+    // Validate downloadOptions if present
+    if (req.body.downloadOptions && Array.isArray(req.body.downloadOptions)) {
+      for (const option of req.body.downloadOptions) {
+        if (!option.url) {
+          return res.status(400).json({ error: 'URL is required for all download options' });
+        }
+        if (!option.quality) {
+          return res.status(400).json({ error: 'Quality is required for all download options' });
+        }
+      }
+    }
+    
+    // Validate episodes if present
+    if (req.body.contentType === 'series' && req.body.episodes && Array.isArray(req.body.episodes)) {
+      for (const episode of req.body.episodes) {
+        if (!episode.title) {
+          return res.status(400).json({ error: 'Title is required for all episodes' });
+        }
+        if (!episode.number) {
+          return res.status(400).json({ error: 'Episode number is required for all episodes' });
+        }
+        
+        // Validate episode download links if present
+        if (episode.downloadLinks && Array.isArray(episode.downloadLinks)) {
+          for (const link of episode.downloadLinks) {
+            if (!link.url) {
+              return res.status(400).json({ error: 'URL is required for all episode download links' });
+            }
+            if (!link.quality) {
+              return res.status(400).json({ error: 'Quality is required for all episode download links' });
+            }
+          }
+        }
+      }
     }
     
     const movie = new Movie(req.body);
     await movie.save();
     res.status(201).json(movie);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to save movie' });
+    // Check for validation error (MongoDB validation)
+    if (error.name === 'ValidationError') {
+      const validationErrors = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({ error: 'Validation error', details: validationErrors });
+    }
+    
+    // Check for duplicate key error
+    if (error.code === 11000) {
+      return res.status(400).json({ error: 'Duplicate key error. Movie may already exist with this title or identifier.' });
+    }
+    
+    console.error('Error saving movie:', error);
+    res.status(500).json({ error: 'Failed to save movie', message: error.message });
   }
 });
 
