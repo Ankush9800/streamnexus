@@ -50,7 +50,7 @@ const movieSchema = new mongoose.Schema({
   downloadUrl: String,
   downloadOptions: [{
     quality: { type: String, enum: ['720p', '1080p', '4K', 'default'] },
-    url: { type: String, required: true },
+    url: String,
     size: String
   }],
   screenshots: [String],
@@ -68,11 +68,11 @@ const movieSchema = new mongoose.Schema({
     title: { type: String },
     description: { type: String, default: '' },
     downloadLinks: [{
-      quality: { type: String },
-      url: { type: String },
-      size: { type: String, default: '' }
+      quality: String,
+      url: String,
+      size: String
     }],
-    screenshot: { type: String, default: '' }
+    screenshot: String
   }]
 });
 
@@ -243,11 +243,9 @@ app.post('/api/movies', authMiddleware, async (req, res) => {
     // Validate downloadOptions if present
     if (req.body.downloadOptions && Array.isArray(req.body.downloadOptions)) {
       for (const option of req.body.downloadOptions) {
-        if (!option.url) {
-          return res.status(400).json({ error: 'URL is required for all download options' });
-        }
-        if (!option.quality) {
-          return res.status(400).json({ error: 'Quality is required for all download options' });
+        // Only validate quality if URL is provided
+        if (option.url && !option.quality) {
+          return res.status(400).json({ error: 'Quality is required when URL is provided for download options' });
         }
       }
     }
@@ -265,11 +263,9 @@ app.post('/api/movies', authMiddleware, async (req, res) => {
         // Validate episode download links if present
         if (episode.downloadLinks && Array.isArray(episode.downloadLinks)) {
           for (const link of episode.downloadLinks) {
-            if (!link.url) {
-              return res.status(400).json({ error: 'URL is required for all episode download links' });
-            }
-            if (!link.quality) {
-              return res.status(400).json({ error: 'Quality is required for all episode download links' });
+            // Only validate quality if URL is provided
+            if (link.url && !link.quality) {
+              return res.status(400).json({ error: 'Quality is required when URL is provided for episode download links' });
             }
           }
         }
